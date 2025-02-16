@@ -7,7 +7,12 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16" />
     <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"
+      integrity="sha512-8ExARjWWkIllMlNzVg7JKq9RKWPlJABQUNq6YvAjE/HobctjH/NA+bSiDMDvouBVjp4Wwnf1VP1OEv7Zgjtuxw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
   </head>
   <body class="__className_36bd41">
     <div class="w-screen h-screen p-5 bg-gray-800">
@@ -362,6 +367,50 @@
       };
 
       start();
+
+      // Kết nối tới server Socket.IO
+      const socket = io();
+
+      // Khi nhận thông điệp từ server
+      socket.on('connect', (data) => {
+        console.log('connected');
+
+        // Khi nhận thông điệp từ server
+        socket.emit('join', { username: 'User ' + socket.id });
+
+        // Sự kiện khi nhận dữ liệu từ client
+        socket.on('joined', (data) => {
+          console.log('Received message: ', data);
+          liveCount.innerHTML = `Live: ${data.count}`;
+        });
+
+        socket.on('message', (data) => {
+          console.log('Received message: ', data);
+
+          inbox.innerHTML += `<div class='flex py-2'>
+            <div>
+              <div class="bg-gray-800 py-1.5 px-4 rounded text-white">${data.content}</div> 
+              <div class='text-xs text-gray-400 mt-1 max-h-max'>${new Date().toLocaleString().substring(0,5)}</div>
+            </div>
+          </div>`;
+        });
+      });
+
+      const send = () => {
+        if (messageBox.value) {
+          inbox.innerHTML += `<div class='flex justify-end py-2'>
+            <div>
+              <div class="bg-gray-200 py-1.5 px-4 rounded">${messageBox.value}</div> 
+              <div class='text-xs text-gray-400 mt-1 max-h-max'>${new Date().toLocaleString().substring(0,5)}</div>
+            </div>
+          </div>`;
+          socket.emit('message', { content: messageBox.value });
+          messageBox.value = '';
+        }
+      }
+
+      messageBox.onchange = send;
+      sendBtn.onclick = send;  
 
       
     </script>
