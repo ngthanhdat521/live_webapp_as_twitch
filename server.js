@@ -51,7 +51,7 @@ app.post('/api/upload/webcam', upload.single('video'), (req, res) => {
   // res.send('Video uploaded and streaming started');
 
   exec(
-    `ffmpeg -i ${input} -c:v vp8 -c:a libvorbis -f webm -speed 5 "live_stream/segment_${folders.length + 1}.webm"`,
+    `ffmpeg -i ${input} -c:v vp8 -c:a libvorbis -f webm -speed 10 -threads 8 -preset ultrafast "live_stream/segment_${folders.length + 1}.webm"`,
     (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);

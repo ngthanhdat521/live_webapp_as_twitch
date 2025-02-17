@@ -252,6 +252,8 @@
        */
 
       const DURATION_VIDEO = 1;
+      var playing = false;
+      let previousTime = 0; 
       var currentSegments = {};
       var max = 0;
 
@@ -281,6 +283,7 @@
                 resolve(response); // Trả về phản hồi nếu thành công
               })
               .catch((error) => {
+                playing = false;
                 if (remainingRetries > 0) {
                   console.log(`Lỗi: ${error.message}. Thử lại...`);
                   setTimeout(() => attemptFetch(remainingRetries - 1), delay); // Thử lại sau một khoảng thời gian
@@ -316,10 +319,12 @@
 
         sourceBuffer.onupdateend = async () => {
           sourceBuffer.timestampOffset += DURATION_VIDEO;
-          // Now we can move on to next clip and append it
           segmentCount++;
-            
-          await append();
+
+          if (!playing) {
+            playing = true;
+            video.play();
+          }
         };
 
         sourceBuffer.onerror = function(e) {
@@ -341,7 +346,7 @@
         };
   
         const appendCurrentSegments = async () => {
-          segmentCount = currentSegmentCount - 2;                  
+          segmentCount = currentSegmentCount;                  
 
           video.addEventListener('waiting', async () => {
             console.log('Video đang tải...');
@@ -352,7 +357,16 @@
             console.log('Video đang phát');
           });
 
-          setTimeout(append, 5000)
+          // Lắng nghe sự kiện 'timeupdate' để theo dõi khi video thay đổi thời gian
+          video.addEventListener('timeupdate', function() {
+            let decimalPart = video.currentTime.toString().split('.')[1];  // Tách theo dấu chấm
+
+            if (Number("0." + decimalPart) > 0.75) {
+              append();
+            }
+          });
+
+          setTimeout(append, 1500);
         };
 
         // This will kick off event listener chain above
@@ -368,49 +382,49 @@
 
       start();
 
-      // Kết nối tới server Socket.IO
-      const socket = io();
+       // Kết nối tới server Socket.IO
+       const socket = io();
 
-      // Khi nhận thông điệp từ server
-      socket.on('connect', (data) => {
-        console.log('connected');
-
-        // Khi nhận thông điệp từ server
-        socket.emit('join', { username: 'User ' + socket.id });
-
-        // Sự kiện khi nhận dữ liệu từ client
-        socket.on('joined', (data) => {
-          console.log('Received message: ', data);
-          liveCount.innerHTML = `Live: ${data.count}`;
-        });
-
-        socket.on('message', (data) => {
-          console.log('Received message: ', data);
-
-          inbox.innerHTML += `<div class='flex py-2'>
-            <div>
-              <div class="bg-gray-800 py-1.5 px-4 rounded text-white">${data.content}</div> 
-              <div class='text-xs text-gray-400 mt-1 max-h-max'>${new Date().toLocaleString().substring(0,5)}</div>
-            </div>
-          </div>`;
-        });
-      });
-
-      const send = () => {
-        if (messageBox.value) {
-          inbox.innerHTML += `<div class='flex justify-end py-2'>
-            <div>
-              <div class="bg-gray-200 py-1.5 px-4 rounded">${messageBox.value}</div> 
-              <div class='text-xs text-gray-400 mt-1 max-h-max'>${new Date().toLocaleString().substring(0,5)}</div>
-            </div>
-          </div>`;
-          socket.emit('message', { content: messageBox.value });
-          messageBox.value = '';
-        }
-      }
-
-      messageBox.onchange = send;
-      sendBtn.onclick = send;  
+       // Khi nhận thông điệp từ server
+       socket.on('connect', (data) => {
+         console.log('connected');
+ 
+         // Khi nhận thông điệp từ server
+         socket.emit('join', { username: 'User ' + socket.id });
+ 
+         // Sự kiện khi nhận dữ liệu từ client
+         socket.on('joined', (data) => {
+           console.log('Received message: ', data);
+           liveCount.innerHTML = `Live: ${data.count}`;
+         });
+ 
+         socket.on('message', (data) => {
+           console.log('Received message: ', data);
+ 
+           inbox.innerHTML += `<div class='flex py-2'>
+             <div>
+               <div class="bg-gray-800 py-1.5 px-4 rounded text-white">${data.content}</div> 
+               <div class='text-xs text-gray-400 mt-1 max-h-max'>${new Date().toLocaleString().substring(0,5)}</div>
+             </div>
+           </div>`;
+         });
+       });
+ 
+       const send = () => {
+         if (messageBox.value) {
+           inbox.innerHTML += `<div class='flex justify-end py-2'>
+             <div>
+               <div class="bg-gray-200 py-1.5 px-4 rounded">${messageBox.value}</div> 
+               <div class='text-xs text-gray-400 mt-1 max-h-max'>${new Date().toLocaleString().substring(0,5)}</div>
+             </div>
+           </div>`;
+           socket.emit('message', { content: messageBox.value });
+           messageBox.value = '';
+         }
+       }
+ 
+       messageBox.onchange = send;
+       sendBtn.onclick = send;  
 
       
     </script>
